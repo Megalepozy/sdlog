@@ -11,7 +11,7 @@ import (
 
 type SDLogger interface {
 	Lbl(k string, v interface{}) *SDLog
-	AddTracingID(id string) *SDLog
+	AddLogTracingID(id string) *SDLog
 	Info(message string)
 	Error(message string) string
 }
