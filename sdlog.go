@@ -75,5 +75,5 @@ func createLogger(outputStream string) *zap.Logger {
 }
 
 func (s *SDLog) appendSourceLocation() {
-	s.fields = append(s.fields, zapdriver.SourceLocation(runtime.Caller(1)))
+	s.fields = append(s.fields, zapdriver.SourceLocation(runtime.Caller(2)))
 }
