@@ -1,0 +1,6 @@
+{
+  "Enable": ["vet", "vetshadow", "deadcode", "gocyclo", "golint", "varcheck", "structcheck", "maligned",
+    "errcheck", "megacheck", "dupl", "ineffassign", "interfacer", "unconvert", "goconst", "gas", "testify", "gofmt",
+    "goimports", "misspell", "nakedret", "unparam", "safesql"],
+  "Exclude": ["exported \\w+ (\\S*['.]*)([a-zA-Z'.*]*) should have comment"]
+}

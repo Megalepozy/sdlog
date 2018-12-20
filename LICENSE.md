@@ -1,0 +1,1 @@
+Everything in this code is protected and should not be used or copied without being approved by Nimrod Yonatan Ben-Nes
