@@ -3,12 +3,11 @@ package sdlog
 import (
 	"bytes"
 	"fmt"
-	"github.com/google/uuid"
 	"io"
 	"log"
 	"os"
 	"testing"
-
+	"github.com/google/uuid"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -22,7 +21,7 @@ func TestSDLog(t *testing.T) {
 	Convey("Calling Info() with no labels", t, func() {
 		expectedMsg := "The world collapsed"
 
-		res := capturePrintedOutput(New().Info, expectedMsg, "out")
+		res := capturePrintedOutput("out", New().Info, expectedMsg)
 
 		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
 		So(res, ShouldContainSubstring, "\"message\":\""+expectedMsg+"\"")
@@ -33,7 +32,7 @@ func TestSDLog(t *testing.T) {
 	Convey("Calling Info() with added label field (string)", t, func() {
 		expectedMsg := "I want a donut"
 
-		res := capturePrintedOutput(New().Lbl("cat", "is cute").Info, expectedMsg, "out")
+		res := capturePrintedOutput("out", New().Info, expectedMsg, Lbl("cat", "is cute"))
 
 		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
 		So(res, ShouldContainSubstring, "\"message\":\""+expectedMsg+"\"")
@@ -41,11 +40,21 @@ func TestSDLog(t *testing.T) {
 		So(res, ShouldNotContainSubstring, "\"logTracingID\":")
 	})
 
-	Convey("Calling Info() with multiple added label fields (string, int, bool)", t, func() {
+
+	Convey("Calling Info() with added logTracingID label field", t, func() {
+		errTracingID := uuid.New().String()
+
+		res := capturePrintedOutput("out", New().Info, "a", AddLogTracingID(errTracingID))
+
+		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
+		So(res, ShouldContainSubstring, "\"labels\":{\"logTracingID\":\""+errTracingID+"\"")
+	})
+
+	Convey("Calling Info() with multiple added label fields (string, int, bool, logTracingID)", t, func() {
 		expectedMsg := "I want a donut2"
 
-		res := capturePrintedOutput(New().Lbl("cat", "is cute").Lbl("# of dogs", 7).Lbl("bool", false).Info,
-			expectedMsg, "out")
+		res := capturePrintedOutput("out", New().Info, expectedMsg, Lbl("cat", "is cute"),
+			Lbl("# of dogs", 7), Lbl("bool", false))
 
 		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
 		So(res, ShouldContainSubstring, "\"message\":\""+expectedMsg+"\"")
@@ -55,20 +64,11 @@ func TestSDLog(t *testing.T) {
 		So(res, ShouldNotContainSubstring, "\"logTracingID\":")
 	})
 
-	Convey("Calling Info() with added logTracingID label field", t, func() {
-		errTracingID := uuid.New().String()
-
-		res := capturePrintedOutput(New().AddLogTracingID(errTracingID).Info, "a", "out")
-
-		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
-		So(res, ShouldContainSubstring, "\"labels\":{\"logTracingID\":\""+errTracingID+"\"")
-	})
-
 	Convey("Calling Error() with no labels", t, func() {
 		expectedMsg := "The world collapsed!!"
 
 		outID := make(chan string)
-		res := capturePrintedAndReturnedOutput(New().Error, expectedMsg, "err", outID)
+		res := capturePrintedAndReturnedOutput("err", New().Error, expectedMsg, outID)
 
 		errTracingID := <-outID
 		_, uuidErr := uuid.Parse(errTracingID)
@@ -94,8 +94,8 @@ func TestSDLog(t *testing.T) {
 			e := fmt.Errorf("got error %s", "yey")
 
 			outID := make(chan string)
-			res := capturePrintedAndReturnedOutput(New().Lbl("[]struct", s).Lbl("err", e).Error,
-				expectedMsg, "err", outID)
+			res := capturePrintedAndReturnedOutput("err", New().Error, expectedMsg, outID,
+				Lbl("[]struct", s), Lbl("err", e))
 
 			errTracingID := <-outID
 			_, uuidErr := uuid.Parse(errTracingID)
@@ -110,10 +110,11 @@ func TestSDLog(t *testing.T) {
 		})
 }
 
-func capturePrintedOutput(f func(msg string), msg string, stream string) string {
+func capturePrintedOutput(stream string, f func(msg string, options ...func(s *SDLog)), msg string,
+	options ...func(s *SDLog)) string {
 	w, formerState, outC := prepareCapturingOutput(stream)
 
-	f(msg)
+	f(msg, options...)
 
 	w.Close()
 	out := <-outC
@@ -123,10 +124,11 @@ func capturePrintedOutput(f func(msg string), msg string, stream string) string 
 	return out
 }
 
-func capturePrintedAndReturnedOutput(f func(msg string) string, msg string, stream string, outID chan string) string {
+func capturePrintedAndReturnedOutput(stream string, f func(msg string, options ...func(s *SDLog)) string, msg string,
+	outID chan string, options ...func(s *SDLog)) string {
 	w, formerState, outC := prepareCapturingOutput(stream)
 
-	errTracingID := f(msg)
+	errTracingID := f(msg, options...)
 	go func() {
 		outID <- errTracingID
 	}()

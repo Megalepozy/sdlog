@@ -10,10 +10,8 @@ import (
 )
 
 type SDLogger interface {
-	Lbl(k string, v interface{}) *SDLog
-	AddLogTracingID(id string) *SDLog
-	Info(message string)
-	Error(message string) string
+	Info(message string, options ...func(*SDLog))
+	Error(message string, options ...func(*SDLog)) string
 }
 
 type SDLog struct {
@@ -24,39 +22,46 @@ func New() *SDLog {
 	return &SDLog{}
 }
 
-func (s *SDLog) Lbl(k string, v interface{}) *SDLog {
-	vs := cast.ToString(v)
-	if vs == "" {
-		vs = fmt.Sprintf("%#v", v)
+func Lbl(k string, v interface{}) func(*SDLog) {
+	return func(s *SDLog) {
+		vs := cast.ToString(v)
+		if vs == "" {
+			vs = fmt.Sprintf("%#v", v)
+		}
+
+		s.fields = append(s.fields, zapdriver.Label(k, vs))
 	}
-
-	s.fields = append(s.fields, zapdriver.Label(k, vs))
-
-	return s
 }
 
-func (s *SDLog) AddLogTracingID(id string) *SDLog {
-	s.Lbl("logTracingID", id)
-	return s
+func AddLogTracingID(id string) func(*SDLog) {
+	return Lbl("logTracingID", id)
 }
 
-func (s *SDLog) Info(message string) {
+func (s *SDLog) Info(message string, options ...func(s *SDLog)) {
 	logger := createLogger("stdout")
 	defer logger.Sync()
 
 	s.appendSourceLocation()
 
+	for _, option := range options {
+		option(s)
+	}
+
 	logger.Info(message, s.fields...)
 }
 
-func (s *SDLog) Error(message string) string {
+func (s *SDLog) Error(message string, options ...func(s *SDLog)) string {
 	logger := createLogger("stderr")
 	defer logger.Sync()
 
 	s.appendSourceLocation()
 
 	logTracingID := uuid.New().String()
-	s.AddLogTracingID(logTracingID)
+	options = append(options, AddLogTracingID(logTracingID))
+
+	for _, option := range options {
+		option(s)
+	}
 
 	logger.Error(message, s.fields...)
 
