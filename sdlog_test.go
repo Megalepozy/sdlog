@@ -15,7 +15,7 @@ func TestSDLog(t *testing.T) {
 	Convey("Creation of logger struct", t, func() {
 		res := New()
 
-		So(res, ShouldHaveSameTypeAs, &SDLog{})
+		So(res, ShouldHaveSameTypeAs, SDLog{})
 	})
 
 	Convey("Calling Info() with no labels", t, func() {

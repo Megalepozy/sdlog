@@ -18,8 +18,8 @@ type SDLog struct {
 	fields []zap.Field
 }
 
-func New() *SDLog {
-	return &SDLog{}
+func New() SDLog {
+	return SDLog{}
 }
 
 func Lbl(k string, v interface{}) func(*SDLog) {
@@ -37,20 +37,20 @@ func AddLogTracingID(id string) func(*SDLog) {
 	return Lbl("logTracingID", id)
 }
 
-func (s *SDLog) Info(message string, options ...func(s *SDLog)) {
+func (s SDLog) Info(message string, options ...func(s *SDLog)) {
 	logger := createLogger("stdout")
 	defer logger.Sync()
 
 	s.appendSourceLocation()
 
 	for _, option := range options {
-		option(s)
+		option(&s)
 	}
 
 	logger.Info(message, s.fields...)
 }
 
-func (s *SDLog) Error(message string, options ...func(s *SDLog)) string {
+func (s SDLog) Error(message string, options ...func(s *SDLog)) string {
 	logger := createLogger("stderr")
 	defer logger.Sync()
 
@@ -60,7 +60,7 @@ func (s *SDLog) Error(message string, options ...func(s *SDLog)) string {
 	options = append(options, AddLogTracingID(logTracingID))
 
 	for _, option := range options {
-		option(s)
+		option(&s)
 	}
 
 	logger.Error(message, s.fields...)
