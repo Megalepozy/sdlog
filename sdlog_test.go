@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"testing"
+
 	"github.com/google/uuid"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -15,13 +16,14 @@ func TestSDLog(t *testing.T) {
 	Convey("Creation of logger struct", t, func() {
 		res := New()
 
-		So(res, ShouldHaveSameTypeAs, SDLog{})
+		So(res, ShouldHaveSameTypeAs, &SDLog{})
 	})
 
 	Convey("Calling Info() with no labels", t, func() {
 		expectedMsg := "The world collapsed"
+		sdlogStruct := New()
 
-		res := capturePrintedOutput("out", New().Info, expectedMsg)
+		res := capturePrintedOutput("out", sdlogStruct.Info, expectedMsg)
 
 		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
 		So(res, ShouldContainSubstring, "\"message\":\""+expectedMsg+"\"")
@@ -31,8 +33,9 @@ func TestSDLog(t *testing.T) {
 
 	Convey("Calling Info() with added label field (string)", t, func() {
 		expectedMsg := "I want a donut"
+		sdlogStruct := New()
 
-		res := capturePrintedOutput("out", New().Info, expectedMsg, Lbl("cat", "is cute"))
+		res := capturePrintedOutput("out", sdlogStruct.Info, expectedMsg, sdlogStruct.Lbl("cat", "is cute"))
 
 		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
 		So(res, ShouldContainSubstring, "\"message\":\""+expectedMsg+"\"")
@@ -40,11 +43,11 @@ func TestSDLog(t *testing.T) {
 		So(res, ShouldNotContainSubstring, "\"logTracingID\":")
 	})
 
-
 	Convey("Calling Info() with added logTracingID label field", t, func() {
 		errTracingID := uuid.New().String()
+		sdlogStruct := New()
 
-		res := capturePrintedOutput("out", New().Info, "a", AddLogTracingID(errTracingID))
+		res := capturePrintedOutput("out", sdlogStruct.Info, "a", sdlogStruct.AddLogTracingID(errTracingID))
 
 		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
 		So(res, ShouldContainSubstring, "\"labels\":{\"logTracingID\":\""+errTracingID+"\"")
@@ -52,9 +55,10 @@ func TestSDLog(t *testing.T) {
 
 	Convey("Calling Info() with multiple added label fields (string, int, bool, logTracingID)", t, func() {
 		expectedMsg := "I want a donut2"
+		sdlogStruct := New()
 
-		res := capturePrintedOutput("out", New().Info, expectedMsg, Lbl("cat", "is cute"),
-			Lbl("# of dogs", 7), Lbl("bool", false))
+		res := capturePrintedOutput("out", sdlogStruct.Info, expectedMsg, sdlogStruct.Lbl("cat", "is cute"),
+			sdlogStruct.Lbl("# of dogs", 7), sdlogStruct.Lbl("bool", false))
 
 		So(res, ShouldContainSubstring, "\"severity\":\"INFO\"")
 		So(res, ShouldContainSubstring, "\"message\":\""+expectedMsg+"\"")
@@ -66,9 +70,10 @@ func TestSDLog(t *testing.T) {
 
 	Convey("Calling Error() with no labels", t, func() {
 		expectedMsg := "The world collapsed!!"
+		sdlogStruct := New()
 
 		outID := make(chan string)
-		res := capturePrintedAndReturnedOutput("err", New().Error, expectedMsg, outID)
+		res := capturePrintedAndReturnedOutput("err", sdlogStruct.Error, expectedMsg, outID)
 
 		errTracingID := <-outID
 		_, uuidErr := uuid.Parse(errTracingID)
@@ -80,34 +85,35 @@ func TestSDLog(t *testing.T) {
 		So(uuidErr, ShouldBeNil)
 	})
 
-		Convey("Calling Error() with multiple added label fields ([]struct, error)", t, func() {
-			expectedMsg := "I want a donut2!!"
+	Convey("Calling Error() with multiple added label fields ([]struct, error)", t, func() {
+		expectedMsg := "I want a donut2!!"
+		sdlogStruct := New()
 
-			s := []struct {
-				i int
-				b bool
-			}{
-				{2, true},
-				{3, false},
-			}
+		s := []struct {
+			i int
+			b bool
+		}{
+			{2, true},
+			{3, false},
+		}
 
-			e := fmt.Errorf("got error %s", "yey")
+		e := fmt.Errorf("got error %s", "yey")
 
-			outID := make(chan string)
-			res := capturePrintedAndReturnedOutput("err", New().Error, expectedMsg, outID,
-				Lbl("[]struct", s), Lbl("err", e))
+		outID := make(chan string)
+		res := capturePrintedAndReturnedOutput("err", sdlogStruct.Error, expectedMsg, outID,
+			sdlogStruct.Lbl("[]struct", s), sdlogStruct.Lbl("err", e))
 
-			errTracingID := <-outID
-			_, uuidErr := uuid.Parse(errTracingID)
+		errTracingID := <-outID
+		_, uuidErr := uuid.Parse(errTracingID)
 
-			So(res, ShouldContainSubstring, "\"severity\":\"ERROR\"")
-			So(res, ShouldContainSubstring, "\"message\":\""+expectedMsg+"\"")
-			So(res, ShouldContainSubstring,
-				"\"[]struct\":\"[]struct { i int; b bool }{struct { i int; b bool }{i:2, b:true}, struct { i int; b bool }{i:3, b:false}}\"")
-			So(res, ShouldContainSubstring, "\"err\":\"got error yey\"")
-			So(res, ShouldContainSubstring, "\"logTracingID\":")
-			So(uuidErr, ShouldBeNil)
-		})
+		So(res, ShouldContainSubstring, "\"severity\":\"ERROR\"")
+		So(res, ShouldContainSubstring, "\"message\":\""+expectedMsg+"\"")
+		So(res, ShouldContainSubstring,
+			"\"[]struct\":\"[]struct { i int; b bool }{struct { i int; b bool }{i:2, b:true}, struct { i int; b bool }{i:3, b:false}}\"")
+		So(res, ShouldContainSubstring, "\"err\":\"got error yey\"")
+		So(res, ShouldContainSubstring, "\"logTracingID\":")
+		So(uuidErr, ShouldBeNil)
+	})
 }
 
 func capturePrintedOutput(stream string, f func(msg string, options ...func(s *SDLog)), msg string,
