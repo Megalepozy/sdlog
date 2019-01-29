@@ -10,11 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type SDLogger interface {
-	Info(message string, options ...func(*SDLog))
-	Error(message string, options ...func(*SDLog)) string
-}
-
 type SDLog struct {
 	fields []zap.Field
 }
