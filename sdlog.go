@@ -11,11 +11,17 @@ import (
 )
 
 type SDLog struct {
-	fields []zap.Field
+	callerSkip int
+	fields     []zap.Field
 }
 
-func New() *SDLog {
-	return &SDLog{}
+func New(callerSkip ...int) *SDLog {
+	skip := 2
+	if len(callerSkip) != 0 {
+		skip = callerSkip[0]
+	}
+
+	return &SDLog{callerSkip: skip}
 }
 
 func (s *SDLog) Info(message string, options ...func(s *SDLog)) {
@@ -76,5 +82,5 @@ func createLogger(outputStream string) *zap.Logger {
 }
 
 func (s *SDLog) appendSourceLocation() {
-	s.fields = append(s.fields, zapdriver.SourceLocation(runtime.Caller(2)))
+	s.fields = append(s.fields, zapdriver.SourceLocation(runtime.Caller(s.callerSkip)))
 }

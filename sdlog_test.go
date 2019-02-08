@@ -13,10 +13,18 @@ import (
 )
 
 func TestSDLog(t *testing.T) {
-	Convey("Creation of logger struct", t, func() {
+	Convey("Creation of logger struct with no callerSkip result with *SDLog{callerSkip:2}", t, func() {
 		res := New()
 
 		So(res, ShouldHaveSameTypeAs, &SDLog{})
+		So(res, ShouldResemble, &SDLog{callerSkip: 2})
+	})
+
+	Convey("Creation of logger struct with callerSkip of 3", t, func() {
+		res := New(3)
+
+		So(res, ShouldHaveSameTypeAs, &SDLog{})
+		So(res, ShouldResemble, &SDLog{callerSkip: 3})
 	})
 
 	Convey("Calling Info() with no labels", t, func() {
